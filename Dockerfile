@@ -1,19 +1,23 @@
-FROM golang:1.21-alpine AS builder
+FROM golang:1.22-alpine as builder
 
 WORKDIR /app
-COPY . .
-RUN go mod download
-RUN CGO_ENABLED=0 GOOS=linux go build -o /book-forum ./cmd/server/main.go
 
+COPY go.mod go.sum ./
+RUN go mod download
+
+COPY . .
+
+RUN go build -o app ./cmd/main.go
+
+COPY config.yaml ./config.yaml
+
+# Финальный контейнер
 FROM alpine:latest
 
-WORKDIR /app
-COPY --from=builder /book-forum .
-COPY migrations ./migrations
-COPY .env .
-COPY wait-for-postgres.sh .  # Теперь файл существует
+WORKDIR /root/
 
-RUN chmod +x wait-for-postgres.sh
+COPY --from=builder /app/app .
 
 EXPOSE 8080
-CMD ["./wait-for-postgres.sh", "postgres", "--", "./book-forum"]
+
+CMD ["./app"]
