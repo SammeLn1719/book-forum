@@ -1,17 +1,18 @@
 package handler
 
 import (
-	//"encoding/json"
 	"net/http"
 )
 
-//type Book struct {
-//	ID 	   int     `json:"id"`
-//	Title  string  `json:"title"`
-//	Author string  `json:"authar"`
-//}
+type Book struct {
+	ID          int    `json:"id"`
+	Title       string `json:"title"`
+	Author      string `json:"authar"`
+	Description string `json:"description"`
+	Prise       int    `json:"prise"`
+}
 
-func GetBooksHandler(w http.ResponseWriter, r *http.Request)  {
+func GetBooksHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("Getbooks"))
+	w.Write([]byte("GetBooks"))
 }

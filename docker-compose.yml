@@ -14,7 +14,10 @@ services:
       - db_data:/var/lib/postgresql/data
 
   app:
-    build: .
+    image: golang:1.23 
+    working_dir: /app
+    volumes:
+      - ./:/app
     ports:
       - "8080:8080"
     depends_on:
@@ -25,6 +28,10 @@ services:
       - DB_USER=user
       - DB_PASSWORD=password
       - DB_NAME=app_db
-
+    command: >
+      sh -c "
+      go install github.com/cespare/reflex@latest &&
+      reflex -r '\.go$' -s go run ./cmd/main.go
+      "
 volumes:
   db_data:
