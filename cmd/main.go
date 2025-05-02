@@ -11,7 +11,7 @@ import (
 	"book-forum/internal/db"
 	"book-forum/internal/handler"
 	"book-forum/internal/models"
-	"book-forum/internal/usecase"
+	"book-forum/internal/repository"
 )
 
 func main() {
@@ -48,17 +48,18 @@ func main() {
 		Price:       12.99,
 	}
 
-	id, err := usecase.InsertBook(database, newBook)
+	id, err := repository.InsertBook(database, newBook)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	fmt.Printf("Inserted book with ID: %d\n", id)
-
+	bookRepo := repository.NewBookRepository(database)
+	bookHandler := handler.NewBookHandler(bookRepo)
 	// Инициализация роутера
 	r := chi.NewRouter()
 	r.Get("/health", handler.HealthHandler)
-	r.Get("/book", handler.GetBooksHandler)
+	r.Get("/books", bookHandler.GetAllBooks)
 	// Старт сервера
 	port := cfg.ServerPort
 	if port == "" {
