@@ -20,7 +20,7 @@ func NewBookRepository(db *sql.DB) *BookRepository {
 
 func (r *BookRepository) GetBookByID(id int) (*models.Book, error) {
 	query := `
-		SELECT id, title, author, description, price 
+		SELECT id, title, author, description, price, cover
 		FROM books 
 		WHERE id = $1
 	`
@@ -32,6 +32,7 @@ func (r *BookRepository) GetBookByID(id int) (*models.Book, error) {
 		&book.Author,
 		&book.Description,
 		&book.Price,
+		&book.Cover,
 	)
 
 	if err != nil {
@@ -44,9 +45,9 @@ func (r *BookRepository) GetBookByID(id int) (*models.Book, error) {
 	return &book, nil
 }
 
-// Остальные методы остаются без изменений
+// Остальные методы остаются без изменения
 func (r *BookRepository) GetAllBooks() ([]models.Book, error) {
-	query := `SELECT id, title, author, description, price FROM books`
+	query := `SELECT id, title, author, description, price, cover FROM books`
 	rows, err := r.DB.Query(query)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get books: %v", err)
@@ -62,6 +63,7 @@ func (r *BookRepository) GetAllBooks() ([]models.Book, error) {
 			&book.Author,
 			&book.Description,
 			&book.Price,
+			&book.Cover,
 		); err != nil {
 			return nil, fmt.Errorf("failed to scan book: %v", err)
 		}
@@ -71,7 +73,7 @@ func (r *BookRepository) GetAllBooks() ([]models.Book, error) {
 }
 
 func InsertBook(db *sql.DB, book models.Book) (int, error) {
-	query := `INSERT INTO books (title, author, description, price) 
+	query := `INSERT INTO books (title, author, description, price, cover) 
 	          VALUES ($1, $2, $3, $4) 
 	          RETURNING id`
 
@@ -81,6 +83,7 @@ func InsertBook(db *sql.DB, book models.Book) (int, error) {
 		book.Author,
 		book.Description,
 		book.Price,
+		book.Cover,
 	).Scan(&id)
 	
 	if err != nil {

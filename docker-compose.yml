@@ -17,6 +17,7 @@ services:
     image: golang:1.23 
     working_dir: /app
     volumes:
+      - ./uploads:/app/uploads
       - ./:/app
     ports:
       - "8080:8080"
