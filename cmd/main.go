@@ -11,7 +11,8 @@ import (
 	"book-forum/internal/config"
 	"book-forum/internal/db"
 	"book-forum/internal/handler"
-	"book-forum/internal/repository"
+	"book-forum/internal/repository"
+	"book-forum/internal/middleware"
 )
 
 func main() {
@@ -40,6 +41,9 @@ func main() {
 	db.CreateTable(database)
 	bookRepo := repository.NewBookRepository(database)
 	bookHandler := handler.NewBookHandler(bookRepo)
+	userRepo := repository.NewUserRepository(database)
+	sessionRepo := repository.NewSessionRepository(database)
+	authHandler := handler.NewAuthHandler(userRepo, sessionRepo)
 
 	// Настройка CORS
 	c := cors.New(cors.Options{
@@ -53,17 +57,28 @@ func main() {
 	// Инициализация роутера
 	r := chi.NewRouter()
 	r.Use(c.Handler)
-
+	profileHandler := handler.ProfileHandler
 	// Отдача статических файлов (картинок)
 	r.Handle("/uploads/*", http.StripPrefix("/uploads/", http.FileServer(http.Dir("uploads"))))
 
 	// Маршруты
 	r.Get("/health", handler.HealthHandler)
 	r.Route("/books", func(r chi.Router) {
-	r.Get("/", bookHandler.GetAllBooks)
-	r.Get("/{id}", bookHandler.GetBookByID)
+		r.Get("/", bookHandler.GetAllBooks)
+		r.Get("/{id}", bookHandler.GetBookByID)
 		// Добавьте другие методы при необходимости
 	})
+	r.Post("/register", authHandler.Register)
+  r.Post("/login", authHandler.Login)
+	r.Post("/logout", authHandler.Logout)
+
+// Защищенные роуты
+r.Group(func(r chi.Router) {
+		r.Use(middleware.AuthMiddleware(sessionRepo))
+		r.Get("/profile", profileHandler)
+		r.Post("/logout", authHandler.Logout)
+	})
+	
 
 	// Запуск сервера
 	port := cfg.ServerPort
