@@ -38,7 +38,10 @@ func main() {
 	log.Printf("Database version: %s", version)
 
 	// Инициализация репозиториев и обработчиков
-	db.CreateTable(database)
+	db.CreateTableBooks(database)
+	if err := db.CreateTableUsers(database); err != nil {
+    log.Fatalf("Failed to create tables: %v", err) // Добавьте эту проверку
+  }
 	bookRepo := repository.NewBookRepository(database)
 	bookHandler := handler.NewBookHandler(bookRepo)
 	userRepo := repository.NewUserRepository(database)
