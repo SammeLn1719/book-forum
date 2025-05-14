@@ -31,10 +31,7 @@ func CreateTableUsers(db *sql.DB) error {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );`
 
-    // Создание таблицы книг (пример, если ещё не существует)
- 
-
-    // Добавьте другие таблицы по аналогии
+        // Добавьте другие таблицы по аналогии
 
     _, err := db.Exec(usersTable)
     if err != nil {
