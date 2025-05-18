@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"time"
+    "strings"
 	"github.com/google/uuid"
 	"book-forum/internal/models"
 	"book-forum/internal/repository"
@@ -15,6 +16,18 @@ type AuthHandler struct {
 	sessionRepo *repository.SessionRepository
 }
 
+// ValidationError представляет ошибку валидации
+type ValidationError struct {
+    Field   string `json:"field"`
+    Message string `json:"message"`
+}
+
+type RegisterRequest struct {
+    Username string `json:"username"`
+    Email    string `json:"email"`
+    Password string `json:"password"`
+}
+
 func NewAuthHandler(userRepo *repository.UserRepository, sessionRepo *repository.SessionRepository) *AuthHandler {
 	return &AuthHandler{
 		userRepo:    userRepo,
@@ -22,20 +35,63 @@ func NewAuthHandler(userRepo *repository.UserRepository, sessionRepo *repository
 	}
 }
 
+// ValidateRegistrationRequest проверяет все обязательные поля
+func ValidateRegistrationRequest(req RegisterRequest) []ValidationError {
+    var errors []ValidationError
+
+    // Проверка каждого поля с кастомными сообщениями
+    if strings.TrimSpace(req.Username) == "" {
+        errors = append(errors, ValidationError{
+            Field:   "username",
+            Message: "Имя пользователя обязательно для заполнения",
+        })
+    }
+
+    if strings.TrimSpace(req.Email) == "" {
+        errors = append(errors, ValidationError{
+            Field:   "email",
+            Message: "Email обязателен для заполнения",
+        })
+    }
+
+    if strings.TrimSpace(req.PasswordHash) == "" {
+        errors = append(errors, ValidationError{
+            Field:   "password_hash",
+            Message: "Пароль обязателен для заполнения",
+        })
+    }
+
+    // Дополнительные проверки (например, формат email)
+    if req.Email != "" && !strings.Contains(req.Email, "@") {
+        errors = append(errors, ValidationError{
+            Field:   "email",
+            Message: "Некорректный формат email",
+        })
+    }
+
+    return errors
+}
+
 func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
+	var req RegisterRequest
     var user models.User
-    if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
-        http.Error(w, "Неверный формат данных", http.StatusBadRequest)
+    if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+        http.Error(w, "Неверный формат запроса", http.StatusBadRequest)
         return
     }
 
     // Валидация
-    if user.Username == "" || user.Email == "" || user.Password == "" {
-        http.Error(w, "Все поля обязательны для заполнения", http.StatusBadRequest)
+// Валидация
+    if validationErrors := ValidateRegistrationRequest(req); len(validationErrors) > 0 {
+        w.Header().Set("Content-Type", "application/json")
+        w.WriteHeader(http.StatusBadRequest)
+        json.NewEncoder(w).Encode(map[string]interface{}{
+            "errors": validationErrors,
+        })
         return
     }
 
-    if len(user.Password) < 8 {
+    if len(user.PasswordHash) < 8 {
         http.Error(w, "Пароль должен содержать минимум 8 символов", http.StatusBadRequest)
         return
     }
@@ -58,7 +114,7 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
     }
 
     // Убираем пароль из ответа
-    user.Password = ""
+    user.PasswordHash = ""
 
     w.Header().Set("Content-Type", "application/json")
     w.WriteHeader(http.StatusCreated)
@@ -67,7 +123,7 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
     var creds struct {
         Email    string `json:"email"`
-        Password string `json:"password"`
+        PasswordHash string `json:"password_hash"`
     }
 
     if err := json.NewDecoder(r.Body).Decode(&creds); err != nil {
@@ -81,7 +137,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
         return
     }
 
-    if !utils.CheckPasswordHash(creds.Password, user.Password) {
+    if !utils.CheckPasswordHash(creds.PasswordHash, user.PasswordHash) {
         http.Error(w, "Invalid credentials", http.StatusUnauthorized)
         return
     }
